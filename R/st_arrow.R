@@ -106,6 +106,8 @@ encode_wkb <- function(df){
 #' @return object of \code{sf} with CRS and geometry columns
 #' @keywords internal
 arrow_to_sf <- function(tbl, metadata){
+	
+  schema_version <- ifelse("schema_version" %in% names(metadata), metadata$schema_version, metadata$version)
   geom_cols <- names(metadata$columns)
   geom_cols <- intersect(colnames(tbl), geom_cols)
 
@@ -118,8 +120,14 @@ arrow_to_sf <- function(tbl, metadata){
   }
 
   for(col in geom_cols){
+  	if (schema_version == "0.1.0") {
+  		crs <- sf::st_crs(metadata$columns[[col]]$crs)
+  	} else {
+  		crs <- sf::st_crs(paste0(metadata$columns[[col]]$crs$id$authority,":",metadata$columns[[col]]$crs$id$code))
+  	}
+  	
     tbl[[col]] <- sf::st_as_sfc(tbl[[col]],
-                                crs = sf::st_crs(metadata$columns[[col]]$crs))
+                                crs = crs)
   }
 
   tbl <- sf::st_sf(tbl, sf_column_name = primary_geom)
